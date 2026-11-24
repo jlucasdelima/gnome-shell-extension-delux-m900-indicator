@@ -135,6 +135,7 @@ TestCase {
   function test_apply_errors_tell_what_to_do() {
     compare(Model.applyError('{"ok": true}'), "")
     verify(Model.applyError('{"ok": false, "error": "timeout"}').indexOf("move it") >= 0)
+    verify(Model.applyError('{"ok": false, "error": "unsupported"}').indexOf("8K HS") >= 0)
     verify(Model.applyError("").length > 0)
     verify(Model.applyError('{"ok": false, "error": "weird"}').length > 0)
   }

@@ -27,7 +27,8 @@ builds every report; this helper only moves bytes.
 Error codes: missing (no receiver), access-denied (no permission on the
 hidraw node), asleep (receiver present, mouse silent for SILENCE_SECONDS),
 timeout (no ACK), rejected (ACK with a non-zero status), invalid (bad
-arguments).
+arguments), unsupported (apply with only the fa65 8K HS receiver, which
+takes no feature reports).
 """
 
 from __future__ import annotations
@@ -43,6 +44,11 @@ from pathlib import Path
 from typing import Optional
 
 HID_ID = "0003:00001D57:0000FA60"
+# The 2.4G 8K HS receiver (1d57:fa65) sends the same input report 3, but its
+# vendor interface has no feature reports (only a 63-byte report 4, in and
+# out), so it is read-only here: watch uses it, apply refuses it.
+HS_HID_ID = "0003:00001D57:0000FA65"
+WATCH_IDS = (HID_ID, HS_HID_ID)
 # Collection with UsagePage 0x0A (input report 3): Usage Page, Usage 0,
 # Collection (Application), Report ID 3.
 VENDOR_COLLECTION = bytes.fromhex("050a0900a1018503")
@@ -60,14 +66,14 @@ SILENCE_SECONDS = 6.0
 RETRY_SECONDS = 3.0
 
 
-def find_device(root: Path = Path("/sys/class/hidraw")) -> Optional[str]:
+def find_device(root: Path = Path("/sys/class/hidraw"), ids: tuple = (HID_ID,)) -> Optional[str]:
     for node in sorted(root.glob("hidraw*")):
         try:
             uevent = (node / "device" / "uevent").read_text()
             descriptor = (node / "device" / "report_descriptor").read_bytes()
         except OSError:
             continue
-        if f"HID_ID={HID_ID}" in uevent and VENDOR_COLLECTION in descriptor:
+        if any(f"HID_ID={i}" in uevent for i in ids) and VENDOR_COLLECTION in descriptor:
             return "/dev/" + node.name
     return None
 
@@ -153,6 +159,8 @@ def apply(args: list) -> dict:
         return {"ok": False, "error": "invalid"}
     device = find_device()
     if device is None:
+        if find_device(ids=(HS_HID_ID,)) is not None:
+            return {"ok": False, "error": "unsupported"}
         return {"ok": False, "error": "missing"}
     try:
         error = send_packets(device, packets)
@@ -204,7 +212,7 @@ def watch_device(device: str, last: list) -> None:
 def watch() -> int:
     last: list = []
     while True:
-        device = find_device()
+        device = find_device(ids=WATCH_IDS)
         if device is None:
             emit({"ok": False, "error": "missing"}, last)
         else:

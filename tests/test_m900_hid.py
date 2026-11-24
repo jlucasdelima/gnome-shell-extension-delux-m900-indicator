@@ -17,6 +17,11 @@ VENDOR_DESCRIPTOR = bytes.fromhex(
     "05010980a10185010501198129831500250195037501810695017505810 1c0"
     "050c0901a1018502150026800319002a8003751095018100c0"
     "050a0900a101850319a029a0150025007508950481 02c0".replace(" ", ""))
+HS_VENDOR_DESCRIPTOR = bytes.fromhex(
+    "05010980a101850105011981298315002501950375018106950175058101c0"
+    "050c0901a1018502150026800319002a8003751095018100c0"
+    "050a0900a10185031900290015002500750895048101c0"
+    "0600ff0901a10185047508953f150026ff00090881028504093c7508953f150026ff009102c0")
 
 
 def make_node(sysfs, name, hid_id, descriptor):
@@ -39,6 +44,12 @@ class FindDeviceTest(unittest.TestCase):
         make_node(self.sysfs, "hidraw2", m900_hid.HID_ID, VENDOR_DESCRIPTOR)
         self.assertEqual(m900_hid.find_device(self.sysfs), "/dev/hidraw2")
 
+    # 8K HS receiver (1d57:fa65), interface 2, read from sysfs on 2026-11-24.
+    def test_watch_also_finds_the_hs_receiver_but_apply_does_not(self):
+        make_node(self.sysfs, "hidraw9", m900_hid.HS_HID_ID, HS_VENDOR_DESCRIPTOR)
+        self.assertEqual(m900_hid.find_device(self.sysfs, m900_hid.WATCH_IDS), "/dev/hidraw9")
+        self.assertIsNone(m900_hid.find_device(self.sysfs))
+
     def test_ignores_other_devices_with_the_same_collection(self):
         make_node(self.sysfs, "hidraw0", "0003:0000046D:0000C52B", VENDOR_DESCRIPTOR)
         self.assertIsNone(m900_hid.find_device(self.sysfs))
@@ -49,6 +60,11 @@ class DecodeTest(unittest.TestCase):
     def test_on_battery(self):
         self.assertEqual(m900_hid.decode(bytes.fromhex("033d40014d")),
                          {"event": "power", "state": "discharging", "level": 77})
+
+    # 2026-11-24, M900 Pro on the fa65 receiver: byte 1 is 0x30 there, 0x3d on fa60.
+    def test_m900_pro_on_the_hs_receiver(self):
+        self.assertEqual(m900_hid.decode(bytes.fromhex("0330400122")),
+                         {"event": "power", "state": "discharging", "level": 34})
 
     def test_charging_keeps_the_level(self):
         self.assertEqual(m900_hid.decode(bytes.fromhex("033d400346")),

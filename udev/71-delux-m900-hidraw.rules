@@ -1,2 +1,4 @@
 # DELUX receiver: allow active local session access to vendor interface only.
 SUBSYSTEM=="hidraw", ENV{ID_VENDOR_ID}=="1d57", ENV{ID_MODEL_ID}=="fa60", ENV{ID_USB_INTERFACE_NUM}=="02", TAG+="uaccess"
+# 2.4G 8K HS receiver (fa65): same vendor interface, read-only status (battery, DPI stage).
+SUBSYSTEM=="hidraw", ENV{ID_VENDOR_ID}=="1d57", ENV{ID_MODEL_ID}=="fa65", ENV{ID_USB_INTERFACE_NUM}=="02", TAG+="uaccess"

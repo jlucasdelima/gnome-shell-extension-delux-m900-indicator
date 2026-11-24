@@ -319,6 +319,7 @@ var APPLY_ERRORS = {
   rejected: "The mouse rejected the settings.",
   missing: "Receiver disconnected.",
   "access-denied": "No permission on the receiver. Install the udev rule from the README.",
+  unsupported: "Settings over this receiver (8K HS) are not supported yet; only the battery works.",
   invalid: "Invalid settings; nothing was sent."
 }
 

@@ -3,7 +3,9 @@
 Omarchy bar widget for the DELUX M900 Pro wireless mouse: battery in the
 bar and, in the panel, DPI, polling rate, lighting, sensor and timing
 settings. Everything goes through the 2.4G receiver (`1d57:fa60`), without
-the Windows driver.
+the Windows driver. With the 2.4G 8K HS receiver (`1d57:fa65`), only the
+battery works: that receiver takes settings in another format, not decoded
+yet.
 
 - The bar shows 󰍽 and the percentage. The icon takes the warning color at
   15% battery or less, and dims when the receiver or the mouse does not
