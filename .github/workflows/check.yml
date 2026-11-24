@@ -8,6 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
-      - run: pacman -Syu --noconfirm --needed git python qt6-declarative
+      - run: pacman -Syu --noconfirm --needed gjs
       - uses: actions/checkout@v4
-      - run: tests/check.sh
+      - run: gjs -m tests.js

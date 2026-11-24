@@ -12,6 +12,6 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 
 Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
-### Bar entry
+### Extension review
 
-Before changing the bar entry, read `/usr/share/omarchy/shell/plugins/bar/README.md` ("Icon geometry") and match the shell's own widget for the same job (clicks, label, settings): for a battery, `/usr/share/omarchy/shell/plugins/panels/power/Panel.qml`.
+`pack.sh` builds the zip uploaded to extensions.gnome.org, so every change to `extension/` must pass its review guidelines: https://gjs.guide/extensions/review-guidelines/review-guidelines.html (undo in `disable()` everything `enable()` did, no helper scripts or binaries, nothing in the zip the extension does not use).

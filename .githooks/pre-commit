@@ -1,2 +1,2 @@
 #!/bin/sh
-exec "$(git rev-parse --show-toplevel)/tests/check.sh"
+out=$(gjs -m "$(git rev-parse --show-toplevel)/tests.js") || { printf '%s\n' "$out" >&2; exit 1; }
