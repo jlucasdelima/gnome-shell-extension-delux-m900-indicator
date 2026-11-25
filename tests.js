@@ -40,8 +40,15 @@ check('new level takes the new time',
     '33% since 14:40');
 check('20% is low', view(run([power('discharging', 20), '9:00'])).low, true);
 check('21% is not low', view(run([power('discharging', 21), '9:00'])).low, false);
-check('charging', pick(view(run([power('charging', 34), '9:00'])), 'low', 'chargingIcon', 'status', 'label'),
-    {low: false, chargingIcon: 'battery-level-30-charging-symbolic', status: 'Charging', label: '34%'});
+// The mouse repeats its last measurement while charging: no number then.
+check('charging shows no level', pick(view(run([power('discharging', 34), '9:00'], [power('charging', 34), '9:10'])),
+    'low', 'chargingIcon', 'status', 'label', 'detail'),
+{low: false, chargingIcon: 'battery-level-50-charging-symbolic', status: 'Charging', label: '', detail: null});
+check('asleep while charging shows no level either',
+    pick(view(run([power('charging', 34), '9:10'], [fail('asleep'), '9:20'])), 'label', 'detail'),
+    {label: '', detail: 'Last known: charging (since 9:10)'});
+check('unplugged: the level comes back',
+    view(run([power('charging', 34), '9:10'], [power('discharging', 61), '10:30'])).label, '61%');
 check('charging while low is not a warning', view(run([power('charging', 5), '9:00'])).low, false);
 check('fully charged', pick(view(run([power('full', 100), '9:00'])), 'chargingIcon', 'status', 'label', 'detail'),
     {chargingIcon: 'battery-level-100-charged-symbolic', status: 'Fully charged', label: '100%', detail: null});

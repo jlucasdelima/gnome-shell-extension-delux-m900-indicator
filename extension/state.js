@@ -63,18 +63,22 @@ export function notice(previous, next) {
     };
 }
 
-function chargingIcon(state, level) {
-    if (state === 'full')
-        return 'battery-level-100-charged-symbolic';
-    return `battery-level-${Math.min(100, Math.round(level / 10) * 10)}-charging-symbolic`;
-}
+// While charging, the mouse repeats the level it measured before the cable
+// went in, so neither the number nor that level is shown: the charging icon
+// is always the half-full one.
+const CHARGING_ICONS = {
+    charging: 'battery-level-50-charging-symbolic',
+    full: 'battery-level-100-charged-symbolic',
+};
+
+const lastKnown = s => s.state === 'charging' ? 'charging' : `${s.level}%`;
 
 // {visible, dim, low, chargingIcon (or null), label, status, detail (or
 // null), dpi (or null)}
 export function view(s, {showPercentage = true} = {}) {
     const known = s.level !== null;
     const base = {visible: true, dim: true, low: false, chargingIcon: null,
-        label: known && showPercentage ? `${s.level}%` : '', detail: null,
+        label: known && showPercentage && s.state !== 'charging' ? `${s.level}%` : '', detail: null,
         dpi: s.dpiStage !== null ? `DPI stage ${s.dpiStage}` : null};
 
     switch (s.error) {
@@ -87,7 +91,7 @@ export function view(s, {showPercentage = true} = {}) {
             detail: 'Install the udev rule from the project page'};
     case 'asleep':
         return {...base, status: 'Mouse not responding',
-            detail: known ? `Last known: ${s.level}% (since ${s.since})` : 'Move the mouse or switch it on'};
+            detail: known ? `Last known: ${lastKnown(s)} (since ${s.since})` : 'Move the mouse or switch it on'};
     default:
         return {...base, status: `Error: ${s.error}`};
     }
@@ -95,13 +99,12 @@ export function view(s, {showPercentage = true} = {}) {
     if (!known)
         return {...base, status: 'Waiting for the mouse…'};
 
-    const onCable = s.state === 'charging' || s.state === 'full';
     return {
         ...base,
         dim: false,
         low: warningFor(s.state, s.level) !== null,
-        chargingIcon: onCable ? chargingIcon(s.state, s.level) : null,
+        chargingIcon: CHARGING_ICONS[s.state] ?? null,
         status: {charging: 'Charging', full: 'Fully charged'}[s.state] ?? 'On battery',
-        detail: s.state === 'full' ? null : `${s.level}% since ${s.since}`,
+        detail: s.state === 'discharging' ? `${s.level}% since ${s.since}` : null,
     };
 }

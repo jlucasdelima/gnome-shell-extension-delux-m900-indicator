@@ -6,17 +6,17 @@ driver. It works with both receivers the mouse ships with: `1d57:fa60` and
 the 2.4G 8K HS `1d57:fa65`.
 
 - The top bar shows the mouse icon and the percentage, in yellow at 20% or
-  less on battery, with a charging icon while on the cable.
+  less on battery. On the cable it shows a half-full charging battery
+  icon instead of the percentage: while charging, the mouse keeps repeating the level it
+  measured before the cable went in, so the real level is unknown until
+  the cable comes out. DELUX's Windows software also only says "Charging".
 - At 20%, and again at 5%, a notification warns that the battery is low,
   in the same words as GNOME's own warning for a wireless mouse. Plugging
   the cable in withdraws it.
 - The menu gives the state (on battery, charging, fully charged), since
   when the level has been the same and the DPI stage. The mouse only
   reports the stage when it changes, so it shows up after the first press
-  of the DPI button. While charging, the mouse repeats its last
-  measurement instead of measuring again, so the level does not climb on
-  its own; switching the mouse off and on with its power switch measures
-  it again.
+  of the DPI button.
 - When the mouse sleeps, the indicator dims and keeps the last level. It
   hides while the receiver is unplugged.
 - Settings (in the menu, or in the Extensions app): show the percentage or
