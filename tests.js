@@ -156,24 +156,6 @@ const HS_VENDOR = '05010980a101850105011981298315002501950375018106950175058101c
     '0600ff0901a10185047508953f150026ff00090881028504093c7508953f150026ff009102c0';
 const [M900, HS] = HID_IDS;
 
-{
-    const f = fakeSystem();
-    makeNode(f.sys, 'hidraw1', M900, MOUSE);
-    makeNode(f.sys, 'hidraw2', M900, VENDOR);
-    check('finds the vendor interface of the receiver', findDevice(f.sys, f.dev), `${f.dev}/hidraw2`);
-}
-{
-    const f = fakeSystem();
-    makeNode(f.sys, 'hidraw9', HS, HS_VENDOR);
-    check('finds the HS receiver', findDevice(f.sys, f.dev), `${f.dev}/hidraw9`);
-}
-{
-    const f = fakeSystem();
-    makeNode(f.sys, 'hidraw0', '0003:0000046D:0000C52B', VENDOR);
-    check('ignores other devices with the same collection', findDevice(f.sys, f.dev), null);
-    check('no hidraw directory', findDevice(`${f.sys}/nonexistent`, f.dev), null);
-}
-
 // --- reader.js: Reader ---------------------------------------------------------
 
 const REPORT_34 = String.raw`\003\060\100\001\042`; // 03 30 40 01 22, for printf
@@ -220,6 +202,23 @@ function read(name, f, wanted, expected, setup = () => {}) {
 
 const loop = new GLib.MainLoop(null, false);
 (async () => {
+    {
+        const f = fakeSystem();
+        makeNode(f.sys, 'hidraw1', M900, MOUSE);
+        makeNode(f.sys, 'hidraw2', M900, VENDOR);
+        check('finds the vendor interface of the receiver', await findDevice(f.sys, f.dev), `${f.dev}/hidraw2`);
+    }
+    {
+        const f = fakeSystem();
+        makeNode(f.sys, 'hidraw9', HS, HS_VENDOR);
+        check('finds the HS receiver', await findDevice(f.sys, f.dev), `${f.dev}/hidraw9`);
+    }
+    {
+        const f = fakeSystem();
+        makeNode(f.sys, 'hidraw0', '0003:0000046D:0000C52B', VENDOR);
+        check('ignores other devices with the same collection', await findDevice(f.sys, f.dev), null);
+        check('no hidraw directory', await findDevice(`${f.sys}/nonexistent`, f.dev), null);
+    }
     {
         const f = fakeSystem();
         // Writes one report, then the receiver goes away.

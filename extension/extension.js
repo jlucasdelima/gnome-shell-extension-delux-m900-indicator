@@ -103,7 +103,15 @@ export default class DeluxM900Extension extends Extension {
     disable() {
         this._indicator?.destroy();
         this._indicator = null;
-        this._source?.destroy();
+        if (this._notification) {
+            this._notification.disconnect(this._notificationDestroyId);
+            this._notification = null;
+        }
+        if (this._source) {
+            this._source.disconnect(this._sourceDestroyId);
+            this._source.destroy(); // and its notification
+            this._source = null;
+        }
     }
 
     _notify({title, body, critical}) {
@@ -114,7 +122,7 @@ export default class DeluxM900Extension extends Extension {
                 title: 'DELUX M900 Pro',
                 iconName: 'input-mouse-symbolic',
             });
-            this._source.connect('destroy', () => {
+            this._sourceDestroyId = this._source.connect('destroy', () => {
                 this._source = null;
             });
             Main.messageTray.add(this._source);
@@ -125,7 +133,7 @@ export default class DeluxM900Extension extends Extension {
             body,
             urgency: critical ? MessageTray.Urgency.CRITICAL : MessageTray.Urgency.NORMAL,
         });
-        notification.connect('destroy', () => {
+        this._notificationDestroyId = notification.connect('destroy', () => {
             if (this._notification === notification)
                 this._notification = null;
         });

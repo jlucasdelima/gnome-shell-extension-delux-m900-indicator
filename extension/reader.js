@@ -9,6 +9,11 @@ import GLib from 'gi://GLib';
 // state in b3 (1 on battery, 2 fully charged, 3 charging) and the level in
 // b4 (docs/re/findings.md).
 
+Gio._promisify(Gio.File.prototype, 'load_contents_async');
+Gio._promisify(Gio.File.prototype, 'enumerate_children_async');
+Gio._promisify(Gio.File.prototype, 'read_async');
+Gio._promisify(Gio.FileEnumerator.prototype, 'next_files_async');
+
 // M900 Pro receiver (fa60) and 2.4G 8K HS receiver (fa65).
 export const HID_IDS = ['0003:00001D57:0000FA60', '0003:00001D57:0000FA65'];
 // Usage Page 0x0A, Usage 0, Collection (Application), Report ID 3.
@@ -39,35 +44,37 @@ export function decode(report) {
     return null;
 }
 
-function load(path) {
+async function load(path, cancellable) {
     try {
-        return Gio.File.new_for_path(path).load_contents(null)[1];
+        const [bytes] = await Gio.File.new_for_path(path).load_contents_async(cancellable);
+        return bytes;
     } catch {
         return null;
     }
 }
 
-// The receiver's vendor hidraw node, or null. Its other interfaces (mouse,
-// keyboard) share the HID_ID, so the report descriptor picks the right one.
-export function findDevice(root = '/sys/class/hidraw', devDir = '/dev') {
+// The receiver's vendor hidraw node, or null (also when cancelled). Its other
+// interfaces (mouse, keyboard) share the HID_ID, so the report descriptor
+// picks the right one.
+export async function findDevice(root = '/sys/class/hidraw', devDir = '/dev', cancellable = null) {
     const names = [];
     try {
-        const children = Gio.File.new_for_path(root).enumerate_children(
-            'standard::name', Gio.FileQueryInfoFlags.NONE, null);
-        for (const info of children)
-            names.push(info.get_name());
-        children.close(null);
+        const children = await Gio.File.new_for_path(root).enumerate_children_async(
+            'standard::name', Gio.FileQueryInfoFlags.NONE, GLib.PRIORITY_DEFAULT, cancellable);
+        let infos;
+        while ((infos = await children.next_files_async(64, GLib.PRIORITY_DEFAULT, cancellable)).length > 0)
+            names.push(...infos.map(info => info.get_name()));
     } catch {
         return null;
     }
     for (const name of names.filter(n => n.startsWith('hidraw')).sort()) {
-        const uevent = load(`${root}/${name}/device/uevent`);
+        const uevent = await load(`${root}/${name}/device/uevent`, cancellable);
         if (uevent === null)
             continue;
         const text = new TextDecoder().decode(uevent);
         if (!HID_IDS.some(id => text.includes(`HID_ID=${id}`)))
             continue;
-        const descriptor = load(`${root}/${name}/device/report_descriptor`);
+        const descriptor = await load(`${root}/${name}/device/report_descriptor`, cancellable);
         if (descriptor !== null && String.fromCharCode(...descriptor).includes(VENDOR_COLLECTION))
             return `${devDir}/${name}`;
     }
@@ -142,8 +149,10 @@ export class Reader {
         });
     }
 
-    _scan(cancellable) {
-        const device = findDevice(this._root, this._devDir);
+    async _scan(cancellable) {
+        const device = await findDevice(this._root, this._devDir, cancellable);
+        if (cancellable.is_cancelled())
+            return;
         if (device === null) {
             this._clearTimer('_silenceId');
             this._emit({ok: false, error: 'missing'});
@@ -152,12 +161,18 @@ export class Reader {
         }
         let file;
         try {
-            file = Gio.File.new_for_path(device).read(null);
+            file = await Gio.File.new_for_path(device).read_async(GLib.PRIORITY_DEFAULT, cancellable);
         } catch (e) {
+            if (cancellable.is_cancelled())
+                return;
             const denied = e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.PERMISSION_DENIED);
             this._clearTimer('_silenceId');
             this._emit({ok: false, error: denied ? 'access-denied' : 'missing'});
             this._retryLater(cancellable);
+            return;
+        }
+        if (cancellable.is_cancelled()) {
+            file.close(null);
             return;
         }
         // The file stream owns the descriptor; the Unix stream over the same
