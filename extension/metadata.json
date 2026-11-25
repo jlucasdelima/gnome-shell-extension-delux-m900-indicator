@@ -3,6 +3,6 @@
   "name": "DELUX M900 Pro",
   "description": "Battery level of the DELUX M900 Pro wireless mouse in the top bar, with a notification when it runs low, read from its 2.4G receiver (USB 1d57:fa60, or the 8K receiver 1d57:fa65).\n\nNeeds a udev rule that lets your session read the receiver: see the project page.",
   "shell-version": ["51"],
-  "url": "https://github.com/jlucasdelima/delux-m900-indicator",
+  "url": "https://github.com/jlucasdelima/gnome-shell-extension-delux-m900-indicator",
   "settings-schema": "org.gnome.shell.extensions.delux-m900-indicator"
 }

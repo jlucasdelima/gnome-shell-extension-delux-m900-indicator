@@ -29,7 +29,7 @@ GNOME Shell 51 and a udev rule that gives your session access to interface
 to root.
 
 ```sh
-curl -fLO https://raw.githubusercontent.com/jlucasdelima/delux-m900-indicator/main/udev/71-delux-m900-hidraw.rules
+curl -fLO https://raw.githubusercontent.com/jlucasdelima/gnome-shell-extension-delux-m900-indicator/main/udev/71-delux-m900-hidraw.rules
 sudo install -m 644 71-delux-m900-hidraw.rules /etc/udev/rules.d/
 sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=hidraw
 ```
