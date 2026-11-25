@@ -77,15 +77,6 @@ gjs -m tests.js                       # the tests; no GNOME Shell needed
   and `rate.py` measures the polling rate on evdev (as root:
   `sudo python3 -I tools/rate.py /dev/input/eventN`).
 
-## Releasing
-
-1. Run `gjs -m tests.js` and `./pack.sh`.
-2. Upload `dist/delux-m900-indicator@jlucasdelima.github.io.shell-extension.zip`
-   at <https://extensions.gnome.org/upload/>. extensions.gnome.org numbers
-   the versions itself.
-3. Once it is approved, tag the commit with that number
-   (`git tag -a v<N> -m v<N>`) and push the tag.
-
 ## Credits
 
 Forked from
