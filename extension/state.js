@@ -5,6 +5,9 @@
 // GNOME warns about the battery of a wireless mouse.
 export const LOW_LEVEL = 20;
 export const CRITICAL_LEVEL = 5;
+// Back above this on battery, the mouse was charged while the reader did not
+// see it (screen locked, mouse or receiver off), so the warnings start over.
+export const RESET_LEVEL = 30;
 
 const SEVERITY = {low: 1, critical: 2};
 
@@ -25,9 +28,10 @@ const worse = (a, b) => (SEVERITY[a] ?? 0) > (SEVERITY[b] ?? 0);
 // `now` is the clock time ("14:02") to record when the level changes. The
 // reader only reports changes, so `since` is when the current level was
 // first seen, not the time of the latest report. `warning` is the worst
-// level reached since the mouse was last on the cable, so a level that
-// wavers around a threshold is warned about once.
-export function reduce(current, message, now) {
+// level warned about since the mouse was last charged, so a level that
+// wavers around a threshold is warned about once. With `notify` off, no new
+// warning is recorded, so turning it back on still warns.
+export function reduce(current, message, now, {notify = true} = {}) {
     if (!message || typeof message !== 'object')
         return current;
     if (message.ok === false)
@@ -38,8 +42,8 @@ export function reduce(current, message, now) {
         const same = current.level === message.level && current.state === message.state;
         const reached = warningFor(message.state, message.level);
         let warning = null;
-        if (message.state === 'discharging')
-            warning = worse(reached, current.warning) ? reached : current.warning;
+        if (message.state === 'discharging' && message.level <= RESET_LEVEL)
+            warning = notify && worse(reached, current.warning) ? reached : current.warning;
         return {...current, error: null, state: message.state, level: message.level,
             since: same ? current.since : now, warning};
     }

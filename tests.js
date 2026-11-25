@@ -92,6 +92,16 @@ check('already low at the first report', notices(d(12)), ['low']);
 check('already critical at the first report: one notification', notices(d(3)), ['critical']);
 check('the cable resets the warning',
     notices(d(20), ['charging', 20], d(20), ['full', 100], d(18)), ['low', '-', 'low', '-', 'low']);
+check('charged while unseen: warned again at the next low',
+    notices(d(20), d(5), d(95), d(40), d(20), d(5)), ['low', 'critical', '-', '-', 'low', 'critical']);
+check('wavering below the reset level does not warn again',
+    notices(d(20), d(26), d(30), d(20)), ['low', '-', '-', '-']);
+{
+    // Notifications off at 15%, back on at 12%: the low warning still comes.
+    const off = reduce(initialState(), power('discharging', 15), '9:00', {notify: false});
+    const on = reduce(off, power('discharging', 12), '9:30');
+    check('notification turned back on still warns', [off.warning, notice(off, on)?.critical], [null, false]);
+}
 check('GNOME words for low', notice(initialState(), run([power('discharging', 20), '9:00'])),
     {title: 'Mouse battery low', body: 'Wireless mouse is low on power (20%)', critical: false});
 check('GNOME words for critical', notice(initialState(), run([power('discharging', 5), '9:00'])).body,
@@ -221,6 +231,12 @@ const loop = new GLib.MainLoop(null, false);
         // Holds the node open and silent, then writes a report after stop().
         plugIn(f, `exec 3>"$1"; sleep 0.6; printf '${REPORT_34}' >&3; sleep 0.5`);
         await read('a silent mouse is asleep, and stop() ends the read', f, 1, ['asleep']);
+    }
+    {
+        const f = fakeSystem();
+        // The node opens but every read ends at once (EOF), again and again.
+        plugIn(f, 'for i in $(seq 200); do exec 3>"$1"; exec 3>&-; done & p=$!; sleep 3; kill $p');
+        await read('a node that opens but never reads ends up asleep', f, 1, ['asleep']);
     }
     // Root opens it anyway (CI runs as root).
     if (new Gio.Credentials().get_unix_user() !== 0) {

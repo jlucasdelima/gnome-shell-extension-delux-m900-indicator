@@ -145,6 +145,7 @@ export class Reader {
     _scan(cancellable) {
         const device = findDevice(this._root, this._devDir);
         if (device === null) {
+            this._clearTimer('_silenceId');
             this._emit({ok: false, error: 'missing'});
             this._retryLater(cancellable);
             return;
@@ -154,6 +155,7 @@ export class Reader {
             file = Gio.File.new_for_path(device).read(null);
         } catch (e) {
             const denied = e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.PERMISSION_DENIED);
+            this._clearTimer('_silenceId');
             this._emit({ok: false, error: denied ? 'access-denied' : 'missing'});
             this._retryLater(cancellable);
             return;
@@ -162,7 +164,10 @@ export class Reader {
         // descriptor can be polled, so a cancelled read returns at once
         // instead of waiting in a thread for the next report.
         const stream = new GioUnix.InputStream({fd: file.get_fd(), close_fd: false});
-        this._armSilence();
+        // Reopening keeps a pending timer: only a report restarts it, so a
+        // node that opens but never reads still ends up "asleep".
+        if (!this._silenceId)
+            this._armSilence();
         this._read(file, stream, GLib.get_monotonic_time(), cancellable);
     }
 
@@ -187,7 +192,6 @@ export class Reader {
             } catch {}
             if (cancellable.is_cancelled())
                 return;
-            this._clearTimer('_silenceId');
             // Unplugging ends the read: look again at once so "missing" shows
             // right away, unless the node keeps failing as soon as it opens.
             if (GLib.get_monotonic_time() - openedAt >= this._retryMs * 1000)

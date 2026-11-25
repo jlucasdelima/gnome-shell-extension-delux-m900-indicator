@@ -55,10 +55,11 @@ class Indicator extends PanelMenu.Button {
 
     _onMessage(message) {
         const now = GLib.DateTime.new_now_local().format('%H:%M');
-        const next = reduce(this._state, message, now);
+        const notify = this._settings.get_boolean('notify-low-battery');
+        const next = reduce(this._state, message, now, {notify});
         const warning = notice(this._state, next);
         this._state = next;
-        this._onState(next, this._settings.get_boolean('notify-low-battery') ? warning : null);
+        this._onState(next, warning);
         this._render();
     }
 
