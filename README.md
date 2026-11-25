@@ -5,15 +5,22 @@ mouse in the top bar, read from its 2.4G receiver without the Windows
 driver. It works with both receivers the mouse ships with: `1d57:fa60` and
 the 2.4G 8K HS `1d57:fa65`.
 
-- The top bar shows the mouse icon and the percentage, in yellow at 15% or
+- The top bar shows the mouse icon and the percentage, in yellow at 20% or
   less on battery, with a charging icon while on the cable.
-- The menu gives the state (on battery, charging, fully charged) and since
-  when the level has been the same. While charging, the mouse repeats its
-  last measurement instead of measuring again, so the level does not climb
-  on its own; switching the mouse off and on with its power switch measures
+- At 20%, and again at 5%, a notification warns that the battery is low,
+  in the same words as GNOME's own warning for a wireless mouse. Plugging
+  the cable in withdraws it.
+- The menu gives the state (on battery, charging, fully charged), since
+  when the level has been the same and the DPI stage. The mouse only
+  reports the stage when it changes, so it shows up after the first press
+  of the DPI button. While charging, the mouse repeats its last
+  measurement instead of measuring again, so the level does not climb on
+  its own; switching the mouse off and on with its power switch measures
   it again.
 - When the mouse sleeps, the indicator dims and keeps the last level. It
   hides while the receiver is unplugged.
+- Settings (in the menu, or in the Extensions app): show the percentage or
+  only the icon, and turn the low battery notification on or off.
 
 ## Requirements
 
@@ -47,8 +54,10 @@ sudo udevadm control --reload
   sysfs and reads input report 3, which the receiver pushes about every
   2 s: `03 <model> 40 <state> <level>` for power. There is no helper
   process.
-- `extension/state.js` decides what the indicator shows from those events;
-  `extension/extension.js` is the indicator.
+- `extension/state.js` decides what the indicator shows and when to warn
+  from those events; `extension/extension.js` is the indicator and the
+  notifications; `extension/prefs.js` is the settings page, for the keys
+  in `extension/schemas/`.
 - The receiver protocol, recovered from the Windows driver, is in
   [docs/re/findings.md](docs/re/findings.md).
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.delux-m900-indicator"
+          path="/org/gnome/shell/extensions/delux-m900-indicator/">
+    <key name="show-percentage" type="b">
+      <default>true</default>
+      <summary>Show the battery percentage</summary>
+      <description>Show the percentage next to the mouse icon in the top bar. Off leaves only the icon; the menu still gives the level.</description>
+    </key>
+    <key name="notify-low-battery" type="b">
+      <default>true</default>
+      <summary>Notify when the battery is low</summary>
+      <description>Send a notification when the mouse battery reaches the low level, and again at the critical level.</description>
+    </key>
+  </schema>
+</schemalist>

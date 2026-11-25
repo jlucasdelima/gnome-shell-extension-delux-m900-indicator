@@ -3,7 +3,7 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import System from 'system';
 
-import {initialState, reduce, view} from './extension/state.js';
+import {initialState, notice, reduce, view} from './extension/state.js';
 import {HID_IDS, Reader, decode, findDevice} from './extension/reader.js';
 
 let failures = 0;
@@ -28,7 +28,7 @@ const pick = (v, ...keys) => Object.fromEntries(keys.map(k => [k, v[k]]));
 // The report read on 2026-11-24 with the fa65 receiver: 03 30 40 01 22.
 check('on battery', view(run([power('discharging', 34), '14:02'])), {
     visible: true, dim: false, low: false, chargingIcon: null,
-    label: '34%', status: 'On battery', detail: '34% since 14:02',
+    label: '34%', status: 'On battery', detail: '34% since 14:02', dpi: null,
 });
 check('waiting before the first report', pick(view(initialState()), 'visible', 'dim', 'label', 'status'),
     {visible: true, dim: true, label: '', status: 'Waiting for the mouse…'});
@@ -38,8 +38,8 @@ check('same level keeps its time',
 check('new level takes the new time',
     view(run([power('discharging', 34), '14:02'], [power('discharging', 33), '14:40'])).detail,
     '33% since 14:40');
-check('15% is low', view(run([power('discharging', 15), '9:00'])).low, true);
-check('16% is not low', view(run([power('discharging', 16), '9:00'])).low, false);
+check('20% is low', view(run([power('discharging', 20), '9:00'])).low, true);
+check('21% is not low', view(run([power('discharging', 21), '9:00'])).low, false);
 check('charging', pick(view(run([power('charging', 34), '9:00'])), 'low', 'chargingIcon', 'status', 'label'),
     {low: false, chargingIcon: 'battery-level-30-charging-symbolic', status: 'Charging', label: '34%'});
 check('charging while low is not a warning', view(run([power('charging', 5), '9:00'])).low, false);
@@ -58,6 +58,38 @@ check('a DPI event means the mouse is back',
     view(run([power('discharging', 34), '9:00'], [fail('asleep'), '9:05'], [{ok: true, event: 'dpi', stage: 2}, '9:06'])).status,
     'On battery');
 check('unknown error', view(run([fail('weird'), '9:00'])).status, 'Error: weird');
+check('percentage off leaves only the icon',
+    pick(view(run([power('discharging', 34), '9:00']), {showPercentage: false}), 'label', 'detail'),
+    {label: '', detail: '34% since 9:00'});
+check('no DPI stage before the DPI button', view(run([power('discharging', 34), '9:00'])).dpi, null);
+check('DPI stage after the DPI button, kept across power reports',
+    view(run([{ok: true, event: 'dpi', stage: 3}, '9:00'], [power('discharging', 33), '9:05'])).dpi, 'DPI stage 3');
+
+// Each step's notification: 'low', 'critical' or '-'.
+function notices(...levels) {
+    const out = [];
+    levels.reduce((s, [state, level]) => {
+        const next = reduce(s, power(state, level), '9:00');
+        const n = notice(s, next);
+        out.push(n === null ? '-' : n.critical ? 'critical' : 'low');
+        return next;
+    }, initialState());
+    return out;
+}
+const d = level => ['discharging', level];
+check('low battery is notified once, even if the level wavers',
+    notices(d(22), d(21), d(20), d(21), d(20), d(19)), ['-', '-', 'low', '-', '-', '-']);
+check('critical comes after low, once',
+    notices(d(20), d(6), d(5), d(6), d(4)), ['low', '-', 'critical', '-', '-']);
+check('already low at the first report', notices(d(12)), ['low']);
+check('already critical at the first report: one notification', notices(d(3)), ['critical']);
+check('the cable resets the warning',
+    notices(d(20), ['charging', 20], d(20), ['full', 100], d(18)), ['low', '-', 'low', '-', 'low']);
+check('GNOME words for low', notice(initialState(), run([power('discharging', 20), '9:00'])),
+    {title: 'Mouse battery low', body: 'Wireless mouse is low on power (20%)', critical: false});
+check('GNOME words for critical', notice(initialState(), run([power('discharging', 5), '9:00'])).body,
+    'Wireless mouse is very low on power (5%). This device will soon stop functioning if not charged.');
+
 const before = run([power('discharging', 34), '9:00']);
 check('junk messages change nothing', [reduce(before, null, 'x'), reduce(before, {ok: 'yes'}, 'x'), reduce(before, 5, 'x')],
     [before, before, before]);
